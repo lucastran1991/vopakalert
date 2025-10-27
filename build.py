@@ -74,9 +74,20 @@ def clean_builds():
 
 def build_exe():
     """Build exe using spec file"""
-    print_status("Building exe file...")
-    success, output = run_command("pyinstaller main.spec")
-    return success, output
+    import time
+    epoch = int(time.time())
+    build_name = f"main_{epoch}"
+    
+    print_status(f"Building exe file with name: {build_name}...")
+    
+    # Build with custom name and cross-platform options
+    if platform.system() == "Windows":
+        cmd = f'pyinstaller --name "{build_name}" --windowed --onefile --console=False main.py'
+    else:
+        cmd = f'pyinstaller --name "{build_name}" --windowed --onefile main.py'
+    
+    success, output = run_command(cmd)
+    return success, output, build_name
 
 def main():
     print("=" * 50)
@@ -94,7 +105,7 @@ def main():
     clean_builds()
     
     # Build exe
-    success, output = build_exe()
+    success, output, build_name = build_exe()
     
     if not success:
         print_error("Build failed!")
@@ -103,9 +114,9 @@ def main():
     
     # Check result (cross-platform: .exe for Windows, no extension for Unix)
     if platform.system() == "Windows":
-        exe_name = "main.exe"
+        exe_name = f"{build_name}.exe"
     else:
-        exe_name = "main"
+        exe_name = build_name
     
     exe_path = Path(f"dist/{exe_name}")
     if exe_path.exists():

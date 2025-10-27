@@ -40,7 +40,7 @@ print_status "Python version: $(python3 --version)"
 # Check and install PyInstaller
 if ! command -v pyinstaller &> /dev/null; then
     print_warning "PyInstaller not found. Installing..."
-    pip install pyinstaller
+    pip3 install --break-system-packages pyinstaller 2>/dev/null || pip install pyinstaller
 else
     print_success "PyInstaller is installed"
     echo "   Version: $(pyinstaller --version)"
@@ -51,24 +51,44 @@ print_status "Cleaning previous builds..."
 rm -rf build dist *.spec.bak 2>/dev/null || true
 echo "   Cleaned build/ and dist/ directories"
 
-# Build the exe
-print_status "Building exe file..."
-pyinstaller main.spec
+# Generate timestamp for build name
+EPOCH=$(date +%s)
+BUILD_NAME="main_${EPOCH}"
 
-# Check if build succeeded
-if [ -f "dist/main.exe" ]; then
-    FILE_SIZE=$(du -h dist/main.exe | cut -f1)
-    print_success "Build successful!"
-    echo "   Output: dist/main.exe"
-    echo "   Size: $FILE_SIZE"
-    
-    # Optional: Show file info
-    if command -v file &> /dev/null; then
-        echo "   Type: $(file dist/main.exe)"
-    fi
+print_status "Building exe file with name: $BUILD_NAME..."
+
+# Build with custom name
+if [ "$(uname)" == "Darwin" ] || [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    # macOS/Linux - no .exe extension
+    pyinstaller --name "$BUILD_NAME" --windowed --onefile main.py
+else
+    # Windows
+    pyinstaller --name "$BUILD_NAME" --windowed --onefile --console=False main.py
+fi
+
+# Check if build succeeded (cross-platform: .exe for Windows, no extension for Unix)
+if [ -f "dist/${BUILD_NAME}.exe" ]; then
+    EXE_NAME="${BUILD_NAME}.exe"
+elif [ -f "dist/${BUILD_NAME}" ]; then
+    EXE_NAME="${BUILD_NAME}"
 else
     print_error "Build failed! Executable not found."
+    print_error "Looking for: dist/$BUILD_NAME or dist/${BUILD_NAME}.exe"
+    if [ -d "dist" ]; then
+        print_error "Files in dist/:"
+        ls -lh dist/ || true
+    fi
     exit 1
+fi
+
+FILE_SIZE=$(du -h "dist/$EXE_NAME" | cut -f1)
+print_success "Build successful!"
+echo "   Output: dist/$EXE_NAME"
+echo "   Size: $FILE_SIZE"
+
+# Optional: Show file info
+if command -v file &> /dev/null; then
+    echo "   Type: $(file dist/$EXE_NAME)"
 fi
 
 echo ""

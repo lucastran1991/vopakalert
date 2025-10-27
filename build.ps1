@@ -20,15 +20,18 @@ Write-Host "🧹 Cleaning previous builds..." -ForegroundColor Blue
 if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
 if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
 
-# Build the exe
-Write-Host "⚙️  Building exe file..." -ForegroundColor Blue
-pyinstaller main.spec
+# Generate timestamp for build name
+$epoch = [int][double]::Parse((Get-Date -UFormat %s))
+$buildName = "main_$epoch"
+
+Write-Host "⚙️  Building exe file with name: $buildName..." -ForegroundColor Blue
+pyinstaller --name "$buildName" --windowed --onefile --console=False main.py
 
 # Check if build succeeded
-if (Test-Path "dist\main.exe") {
-    $fileSize = (Get-Item "dist\main.exe").Length / 1MB
+if (Test-Path "dist\${buildName}.exe") {
+    $fileSize = (Get-Item "dist\${buildName}.exe").Length / 1MB
     Write-Host "✅ Build successful!" -ForegroundColor Green
-    Write-Host "📁 Output: dist\main.exe"
+    Write-Host "📁 Output: dist\${buildName}.exe"
     Write-Host "📏 Size: $([math]::Round($fileSize, 2)) MB"
 } else {
     Write-Host "❌ Build failed!" -ForegroundColor Red
