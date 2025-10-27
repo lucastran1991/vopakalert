@@ -104,6 +104,16 @@ Tất cả hoạt động được log ra giao diện với timestamp.
 - Các API endpoints cần accessible
 - Email credentials được hardcode trong code (nên chuyển sang environment variables trong production)
 
+## 📖 Phân tích chi tiết
+
+Xem file [ANALYSIS.md](ANALYSIS.md) để hiểu rõ:
+- Chi tiết từng function
+- Logic flow của application
+- Build process
+- Security concerns
+- API endpoints
+- Improvements và TODO
+
 ## 📄 License
 
 Internal use - Atomiton Inc.

@@ -53,7 +53,7 @@ def send_email_alert(alert_type):
 
     print(f"✅ Alert email sent to: {', '.join(receiver_emails)}")
 
-def check_recommendation():
+def check_recommendation(isNotify=True):
     # --- Tính epoch time ---
     start_epoch, end_epoch = get_epoch_range(5)
 
@@ -62,12 +62,13 @@ def check_recommendation():
 
     url = "http://vopakext.atomiton.com:8090/fid-vopaksteamact"
 
-    payload = f"#\r\neval = GetBoilerActivityDetails({start_epoch}, {end_epoch}, 5, 0)"
+    payload = f"#\r\nGetBoilerActivityDetails({start_epoch},{end_epoch},5,0)"
     headers = {
         'UserToken': 'SuperUser',
         'Content-Type': 'text/plain'
     }
 
+    print("payload:", payload)
     response = requests.post(url, headers=headers, data=payload)
 
     try:
@@ -76,7 +77,8 @@ def check_recommendation():
 
         if total_records < 5:
             print("Error: totalRecords < 5")
-            send_email_alert("recommendation")
+            if isNotify:
+                send_email_alert("recommendation")
         else:
             print("OK, totalRecords =", total_records)
 
@@ -84,27 +86,22 @@ def check_recommendation():
         print("Error: Invalid JSON response")
         print("Raw response:", response.text)
 
-def check_production_status():
+def check_production_status(isNotify=True):
     url = "http://bwcext.atomiton.com:8090/fid-tqlengineres/vopakui/index.html#/auth/login"
     try:
         response = requests.get(url, timeout=10)  # timeout 10 giây
         if response.status_code == 200:
             print("✅ Website is UP (status 200)")
         else:
-            send_email_alert("webdie")
+            if isNotify:
+                send_email_alert("webdie")
     except requests.exceptions.RequestException as e:
         print("❌ Error: Website unreachable — web die")
         print("Detail:", e)
 
-def check_OPC_data():
+def check_OPC_data(isNotify=True):
     url = "http://vopakext.atomiton.com:8080/fid-DigitalTerminalInterface"
-    payload = """<Query>
-                    <Find limit="10" offset="0" orderBy="Notification.time desc">
-                        <Notification>
-                            <alertText ne=""/>
-                        </Notification>
-                    </Find>
-                 </Query>"""
+    payload = """<Query><Find limit="10" offset="0" orderBy="Notification.time desc"><Notification><alertText ne=""/></Notification></Find></Query>"""
     headers = {
         'userToken': 'SuperUser',
         'Content-Type': 'application/xml'
@@ -143,7 +140,8 @@ def check_OPC_data():
 
     if not today_notifications:
         print("error need to recheck the OPC")
-        send_email_alert("opcdie")
+        if isNotify:
+            send_email_alert("opcdie")
     else:
         print("✅ OPC Notifications Today:")
         for alert in today_notifications:

@@ -14,6 +14,7 @@ import schedule
 
 
 running = False  # Cờ điều khiển chạy / dừng
+email_enabled = True  # Cờ bật/tắt gửi email
 
 
 def log_message(msg):
@@ -47,7 +48,7 @@ def start_app():
             if interval_rec <= 0:
                 raise ValueError
             schedule.every(interval_rec).minutes.do(
-                lambda: safe_run(check_recommendation, "Check Recommendation")
+                lambda: safe_run(lambda: check_recommendation(isNotify=email_enabled), "Check Recommendation")
             )
             log_message(f"✅ Scheduled: check_recommendation() every {interval_rec} minutes")
 
@@ -56,7 +57,7 @@ def start_app():
             if interval_prod <= 0:
                 raise ValueError
             schedule.every(interval_prod).minutes.do(
-                lambda: safe_run(check_production_status, "Check Production Status")
+                lambda: safe_run(lambda: check_production_status(isNotify=email_enabled), "Check Production Status")
             )
             log_message(f"✅ Scheduled: check_production_status() every {interval_prod} minutes")
 
@@ -65,7 +66,7 @@ def start_app():
             if interval_opc <= 0:
                 raise ValueError
             schedule.every(interval_opc).minutes.do(
-                lambda: safe_run(check_OPC_data, "Check OPC Data")
+                lambda: safe_run(lambda: check_OPC_data(isNotify=email_enabled), "Check OPC Data")
             )
             log_message(f"✅ Scheduled: check_OPC_data() every {interval_opc} minutes")
 
@@ -95,6 +96,32 @@ def safe_run(func, name):
         log_message(f"❌ Error in {name}(): {e}")
 
 
+def safe_send_email(alert_type):
+    """Gửi email an toàn, chỉ gửi nếu enabled"""
+    global email_enabled
+    if email_enabled:
+        try:
+            send_email_alert(alert_type)
+            log_message(f"📧 Email alert sent: {alert_type}")
+        except Exception as e:
+            log_message(f"❌ Email failed: {e}")
+    else:
+        log_message(f"📧 Email disabled - skipping alert: {alert_type}")
+
+
+def toggle_email():
+    """Toggle email alerts"""
+    global email_enabled
+    email_enabled = var_email_enabled.get()
+    status = "enabled" if email_enabled else "disabled"
+    log_message(f"📧 Email alerts {status}")
+    # Update button appearance
+    if email_enabled:
+        checkbox_email.config(foreground='green')
+    else:
+        checkbox_email.config(foreground='red')
+
+
 def stop_app():
     """Dừng toàn bộ task"""
     global running
@@ -108,58 +135,91 @@ def stop_app():
 # ------------------ UI ------------------
 root = tk.Tk()
 root.title("Vopak Monitor")
-root.geometry("600x400")
+root.geometry("650x450")
 
-frame = ttk.Frame(root, padding=15)
+# Main frame with padding
+frame = ttk.Frame(root, padding=20)
 frame.pack(expand=True, fill='both')
 
-# --- Task selection ---
-ttk.Label(frame, text="Select tasks and frequency (minutes):", font=('Segoe UI', 11, 'bold')).pack(anchor='w', pady=5)
+# --- Task selection section ---
+section_tasks = ttk.LabelFrame(frame, text="Monitoring Tasks", padding=15)
+section_tasks.pack(fill='x', pady=(0, 15))
 
-# Task 1
+ttk.Label(section_tasks, text="Select tasks and frequency (minutes):", 
+         font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(0, 10))
+
+# Task 1 - Recommendation
 var_recommend = tk.BooleanVar()
-frame_rec = ttk.Frame(frame)
+frame_rec = ttk.Frame(section_tasks)
 frame_rec.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend).pack(side='left')
-ttk.Label(frame_rec, text="Every").pack(side='left', padx=(10, 0))
-entry_recommend = ttk.Entry(frame_rec, width=6)
+ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend, 
+                width=25).pack(side='left')
+ttk.Label(frame_rec, text="Every").pack(side='left', padx=(10, 5))
+entry_recommend = ttk.Entry(frame_rec, width=6, justify='center')
 entry_recommend.insert(0, "5")
 entry_recommend.pack(side='left')
-ttk.Label(frame_rec, text="min").pack(side='left', padx=(2, 0))
+ttk.Label(frame_rec, text="min").pack(side='left', padx=(5, 0))
 
-# Task 2
+# Task 2 - Production
 var_production = tk.BooleanVar()
-frame_prod = ttk.Frame(frame)
+frame_prod = ttk.Frame(section_tasks)
 frame_prod.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production).pack(side='left')
-ttk.Label(frame_prod, text="Every").pack(side='left', padx=(10, 0))
-entry_production = ttk.Entry(frame_prod, width=6)
+ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production, 
+                width=25).pack(side='left')
+ttk.Label(frame_prod, text="Every").pack(side='left', padx=(10, 5))
+entry_production = ttk.Entry(frame_prod, width=6, justify='center')
 entry_production.insert(0, "10")
 entry_production.pack(side='left')
-ttk.Label(frame_prod, text="min").pack(side='left', padx=(2, 0))
+ttk.Label(frame_prod, text="min").pack(side='left', padx=(5, 0))
 
-# Task 3
+# Task 3 - OPC
 var_opc = tk.BooleanVar()
-frame_opc = ttk.Frame(frame)
+frame_opc = ttk.Frame(section_tasks)
 frame_opc.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc).pack(side='left')
-ttk.Label(frame_opc, text="Every").pack(side='left', padx=(10, 0))
-entry_opc = ttk.Entry(frame_opc, width=6)
-entry_opc.insert(0, "3")  # mặc định mỗi 3 phút
+ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc, 
+                width=25).pack(side='left')
+ttk.Label(frame_opc, text="Every").pack(side='left', padx=(10, 5))
+entry_opc = ttk.Entry(frame_opc, width=6, justify='center')
+entry_opc.insert(0, "3")
 entry_opc.pack(side='left')
-ttk.Label(frame_opc, text="min").pack(side='left', padx=(2, 0))
+ttk.Label(frame_opc, text="min").pack(side='left', padx=(5, 0))
 
-# --- Buttons ---
-frame_btn = ttk.Frame(frame)
-frame_btn.pack(pady=10)
-btn_start = ttk.Button(frame_btn, text="▶️ Start App", command=start_app)
-btn_start.pack(side='left', padx=10)
-btn_stop = ttk.Button(frame_btn, text="🛑 Stop App", command=stop_app, state="disabled")
-btn_stop.pack(side='left', padx=10)
+# --- Email toggle section ---
+section_email = ttk.Frame(frame)
+section_email.pack(pady=(0, 10))
 
-# --- Log area ---
-ttk.Label(frame, text="Logs:", font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(10, 0))
-log_box = tk.Text(frame, height=10, wrap='word', state='disabled', bg="#f4f4f4")
+var_email_enabled = tk.BooleanVar()
+var_email_enabled.set(True)  # Default enabled
+checkbox_email = ttk.Checkbutton(section_email, 
+                                 text="📧 Enable Email Alerts", 
+                                 variable=var_email_enabled,
+                                 command=toggle_email)
+checkbox_email.pack(side='left')
+# Set initial color
+checkbox_email.config(foreground='green')
+ttk.Label(section_email, text="(Toggle to enable/disable email notifications)", 
+         foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(10, 0))
+
+# --- Control buttons section ---
+section_controls = ttk.Frame(frame)
+section_controls.pack(pady=(0, 15))
+
+btn_start = ttk.Button(section_controls, text="▶️ Start App", command=start_app, width=15)
+btn_start.pack(side='left', padx=5)
+
+btn_stop = ttk.Button(section_controls, text="🛑 Stop App", command=stop_app, state="disabled", width=15)
+btn_stop.pack(side='left', padx=5)
+
+# --- Log area section ---
+section_logs = ttk.LabelFrame(frame, text="Activity Logs", padding=10)
+section_logs.pack(expand=True, fill='both')
+
+log_box = tk.Text(section_logs, height=12, wrap='word', state='disabled', bg="#fafafa", font=('Consolas', 9), relief='flat')
 log_box.pack(expand=True, fill='both')
+
+# Add scrollbar for log
+scrollbar = ttk.Scrollbar(section_logs, orient='vertical', command=log_box.yview)
+scrollbar.pack(side='right', fill='y')
+log_box.config(yscrollcommand=scrollbar.set)
 
 root.mainloop()
