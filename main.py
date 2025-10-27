@@ -115,11 +115,13 @@ def toggle_email():
     email_enabled = var_email_enabled.get()
     status = "enabled" if email_enabled else "disabled"
     log_message(f"📧 Email alerts {status}")
-    # Update button appearance
+    # Update button appearance using ttk.Style
     if email_enabled:
-        checkbox_email.config(foreground='green')
+        style.configure('EmailEnabled.TCheckbutton', foreground='green')
+        checkbox_email.config(style='EmailEnabled.TCheckbutton')
     else:
-        checkbox_email.config(foreground='red')
+        style.configure('EmailDisabled.TCheckbutton', foreground='gray')
+        checkbox_email.config(style='EmailDisabled.TCheckbutton')
 
 
 def stop_app():
@@ -137,6 +139,11 @@ root = tk.Tk()
 root.title("Vopak Monitor")
 root.geometry("650x450")
 
+# Configure ttk styles
+style = ttk.Style()
+style.configure('EmailEnabled.TCheckbutton', foreground='green')
+style.configure('EmailDisabled.TCheckbutton', foreground='gray')
+
 # Main frame with padding
 frame = ttk.Frame(root, padding=20)
 frame.pack(expand=True, fill='both')
@@ -145,15 +152,13 @@ frame.pack(expand=True, fill='both')
 section_tasks = ttk.LabelFrame(frame, text="Monitoring Tasks", padding=15)
 section_tasks.pack(fill='x', pady=(0, 15))
 
-ttk.Label(section_tasks, text="Select tasks and frequency (minutes):", 
-         font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(0, 10))
+ttk.Label(section_tasks, text="Select tasks and frequency (minutes):", font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(0, 10))
 
 # Task 1 - Recommendation
 var_recommend = tk.BooleanVar()
 frame_rec = ttk.Frame(section_tasks)
 frame_rec.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend, 
-                width=25).pack(side='left')
+ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend, width=25).pack(side='left')
 ttk.Label(frame_rec, text="Every").pack(side='left', padx=(10, 5))
 entry_recommend = ttk.Entry(frame_rec, width=6, justify='center')
 entry_recommend.insert(0, "5")
@@ -164,8 +169,7 @@ ttk.Label(frame_rec, text="min").pack(side='left', padx=(5, 0))
 var_production = tk.BooleanVar()
 frame_prod = ttk.Frame(section_tasks)
 frame_prod.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production, 
-                width=25).pack(side='left')
+ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production, width=25).pack(side='left')
 ttk.Label(frame_prod, text="Every").pack(side='left', padx=(10, 5))
 entry_production = ttk.Entry(frame_prod, width=6, justify='center')
 entry_production.insert(0, "10")
@@ -176,8 +180,7 @@ ttk.Label(frame_prod, text="min").pack(side='left', padx=(5, 0))
 var_opc = tk.BooleanVar()
 frame_opc = ttk.Frame(section_tasks)
 frame_opc.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc, 
-                width=25).pack(side='left')
+ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc,width=25).pack(side='left')
 ttk.Label(frame_opc, text="Every").pack(side='left', padx=(10, 5))
 entry_opc = ttk.Entry(frame_opc, width=6, justify='center')
 entry_opc.insert(0, "3")
@@ -190,15 +193,11 @@ section_email.pack(pady=(0, 10))
 
 var_email_enabled = tk.BooleanVar()
 var_email_enabled.set(True)  # Default enabled
-checkbox_email = ttk.Checkbutton(section_email, 
-                                 text="📧 Enable Email Alerts", 
-                                 variable=var_email_enabled,
-                                 command=toggle_email)
+checkbox_email = ttk.Checkbutton(section_email, text="📧 Enable Email Alerts", variable=var_email_enabled, command=toggle_email)
 checkbox_email.pack(side='left')
-# Set initial color
-checkbox_email.config(foreground='green')
-ttk.Label(section_email, text="(Toggle to enable/disable email notifications)", 
-         foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(10, 0))
+# Set initial style to enabled
+checkbox_email.config(style='EmailEnabled.TCheckbutton')
+ttk.Label(section_email, text="(Toggle to enable/disable email notifications)", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(10, 0))
 
 # --- Control buttons section ---
 section_controls = ttk.Frame(frame)

@@ -16,9 +16,27 @@
 - Python 3.7+
 - pip
 
-### Cài đặt dependencies
+### Quick Install
+
+#### Method 1: Automated Script (Recommended)
+
+**macOS/Linux:**
+```bash
+./install.sh
+```
+
+**Windows:**
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+#### Method 2: Manual Install
 
 ```bash
+# Install from requirements.txt
+pip install -r requirements.txt
+
+# Or install individually
 pip install requests schedule
 ```
 
@@ -65,12 +83,15 @@ pyinstaller main.spec
 vopakalert/
 ├── main.py              # File chính (GUI)
 ├── lib.py               # Functions xử lý logic
+├── requirements.txt     # Python dependencies
+├── install.sh           # Install script (macOS/Linux)
+├── install.ps1          # Install script (Windows)
 ├── main.spec            # Cấu hình PyInstaller
 ├── build.sh             # Build script (bash)
 ├── build.py             # Build script (Python)
 ├── build.ps1            # Build script (PowerShell)
 ├── dist/                # File exe sau khi build
-│   └── main.exe
+│   └── *.app or *.exe
 └── README.md
 ```
 
@@ -103,6 +124,13 @@ Tất cả hoạt động được log ra giao diện với timestamp.
 - Cần kết nối internet để gửi email
 - Các API endpoints cần accessible
 - Email credentials được hardcode trong code (nên chuyển sang environment variables trong production)
+
+## 📚 Additional Documentation
+
+- **[ANALYSIS.md](ANALYSIS.md)** - Chi tiết phân tích function
+- **[BUILD_MACOS.md](BUILD_MACOS.md)** - Hướng dẫn build macOS app
+- **[QUICK_START_MACOS.md](QUICK_START_MACOS.md)** - Quick start cho macOS
+- **[EMAIL_TOGGLE_SUMMARY.md](EMAIL_TOGGLE_SUMMARY.md)** - Chi tiết email toggle feature
 
 ## 📖 Phân tích chi tiết
 
