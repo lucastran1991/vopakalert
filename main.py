@@ -95,6 +95,19 @@ def start_app():
     # Cập nhật nút Start/Stop
     btn_start.config(state="disabled")
     btn_stop.config(state="normal")
+    
+    # Disable all checkboxes while running
+    checkbox_recommend.config(state="disabled")
+    checkbox_production.config(state="disabled")
+    checkbox_opc.config(state="disabled")
+    
+    # Disable email checkbox
+    checkbox_email.config(state="disabled")
+    
+    # Disable all entry fields
+    entry_recommend.config(state="disabled")
+    entry_production.config(state="disabled")
+    entry_opc.config(state="disabled")
 
     log_message("▶️ Scheduler started.")
     threading.Thread(target=run_scheduler, daemon=True).start()
@@ -145,6 +158,20 @@ def stop_app():
     schedule.clear()
     btn_start.config(state="normal")
     btn_stop.config(state="disabled")
+    
+    # Enable all checkboxes after stopping
+    checkbox_recommend.config(state="normal")
+    checkbox_production.config(state="normal")
+    checkbox_opc.config(state="normal")
+    
+    # Enable email checkbox
+    checkbox_email.config(state="normal")
+    
+    # Enable all entry fields
+    entry_recommend.config(state="normal")
+    entry_production.config(state="normal")
+    entry_opc.config(state="normal")
+    
     log_message("🛑 Stopping all scheduled tasks...")
 
 
@@ -172,7 +199,8 @@ ttk.Label(section_tasks, text="Select tasks and frequency (minutes):", font=('Se
 var_recommend = tk.BooleanVar()
 frame_rec = ttk.Frame(section_tasks)
 frame_rec.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend, width=25).pack(side='left')
+checkbox_recommend = ttk.Checkbutton(frame_rec, text="Check Recommendation", variable=var_recommend, width=25)
+checkbox_recommend.pack(side='left')
 ttk.Label(frame_rec, text="Every").pack(side='left', padx=(10, 5))
 entry_recommend = ttk.Entry(frame_rec, width=6, justify='center')
 entry_recommend.insert(0, "5")
@@ -183,7 +211,8 @@ ttk.Label(frame_rec, text="min").pack(side='left', padx=(5, 0))
 var_production = tk.BooleanVar()
 frame_prod = ttk.Frame(section_tasks)
 frame_prod.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production, width=25).pack(side='left')
+checkbox_production = ttk.Checkbutton(frame_prod, text="Check Production Status", variable=var_production, width=25)
+checkbox_production.pack(side='left')
 ttk.Label(frame_prod, text="Every").pack(side='left', padx=(10, 5))
 entry_production = ttk.Entry(frame_prod, width=6, justify='center')
 entry_production.insert(0, "10")
@@ -194,7 +223,8 @@ ttk.Label(frame_prod, text="min").pack(side='left', padx=(5, 0))
 var_opc = tk.BooleanVar()
 frame_opc = ttk.Frame(section_tasks)
 frame_opc.pack(anchor='w', pady=5, fill='x')
-ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc,width=25).pack(side='left')
+checkbox_opc = ttk.Checkbutton(frame_opc, text="Check OPC Data", variable=var_opc, width=25)
+checkbox_opc.pack(side='left')
 ttk.Label(frame_opc, text="Every").pack(side='left', padx=(10, 5))
 entry_opc = ttk.Entry(frame_opc, width=6, justify='center')
 entry_opc.insert(0, "3")
