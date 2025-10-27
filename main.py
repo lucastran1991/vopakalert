@@ -17,11 +17,25 @@ running = False  # Cờ điều khiển chạy / dừng
 email_enabled = True  # Cờ bật/tắt gửi email
 
 
-def log_message(msg):
-    """Ghi log ra Text box"""
+def log_message(msg, is_error=False):
+    """Ghi log ra Text box với tùy chọn màu đỏ cho lỗi"""
+    # Shorten message if too long (max 80 chars for display)
+    display_msg = msg
+    if len(msg) > 80:
+        display_msg = msg[:77] + "..."
+    
     timestamp = datetime.now().strftime("%H:%M:%S")
     log_box.config(state='normal')
-    log_box.insert(tk.END, f"[{timestamp}] {msg}\n")
+    
+    # Insert timestamp in normal color
+    log_box.insert(tk.END, f"[{timestamp}] ", "timestamp")
+    
+    # Insert message with color based on error status
+    if is_error:
+        log_box.insert(tk.END, f"{display_msg}\n", "error")
+    else:
+        log_box.insert(tk.END, f"{display_msg}\n", "normal")
+    
     log_box.see(tk.END)
     log_box.config(state='disabled')
 
@@ -93,7 +107,7 @@ def safe_run(func, name):
         func()
         log_message(f"✅ Finished: {name}()")
     except Exception as e:
-        log_message(f"❌ Error in {name}(): {e}")
+        log_message(f"❌ Error in {name}(): {e}", is_error=True)
 
 
 def safe_send_email(alert_type):
@@ -104,7 +118,7 @@ def safe_send_email(alert_type):
             send_email_alert(alert_type)
             log_message(f"📧 Email alert sent: {alert_type}")
         except Exception as e:
-            log_message(f"❌ Email failed: {e}")
+            log_message(f"❌ Email failed: {e}", is_error=True)
     else:
         log_message(f"📧 Email disabled - skipping alert: {alert_type}")
 
@@ -220,5 +234,10 @@ log_box.pack(expand=True, fill='both')
 scrollbar = ttk.Scrollbar(section_logs, orient='vertical', command=log_box.yview)
 scrollbar.pack(side='right', fill='y')
 log_box.config(yscrollcommand=scrollbar.set)
+
+# Configure text tags for coloring
+log_box.tag_config("normal", foreground="black")
+log_box.tag_config("error", foreground="red")
+log_box.tag_config("timestamp", foreground="gray")
 
 root.mainloop()
