@@ -10,15 +10,20 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 import time
-import schedule
 
 
-running = False  # Cờ điều khiển chạy / dừng
-email_enabled = True  # Cờ bật/tắt gửi email
+running = False  # Control flag for run/stop
+email_enabled = True  # Email enable/disable flag
+
+# Cooldown mechanism
+failure_counts = {}  # Track failures per task type
+last_failure_time = {}  # Track last failure time per task type
+failure_threshold = 5  # Default: 5 failures before sending warning
+cooldown_hours = 1  # Default: 1 hour cooldown after failure
 
 
 def log_message(msg, is_error=False):
-    """Ghi log ra Text box với tùy chọn màu đỏ cho lỗi"""
+    """Write log to Text box with optional red color for errors"""
     # Shorten message if too long (max 80 chars for display)
     display_msg = msg
     if len(msg) > 80:
@@ -40,49 +45,157 @@ def log_message(msg, is_error=False):
     log_box.config(state='disabled')
 
 
-def run_scheduler():
-    """Thread chạy schedule"""
-    global running
-    while running:
-        schedule.run_pending()
-        time.sleep(1)
-    log_message("🛑 Scheduler stopped.")
+def get_next_rounded_time():
+    """Calculate rounded up time to the next minute"""
+    now = datetime.now()
+    # Round up to next minute, set seconds and microseconds to 0
+    next_minute = (now + timedelta(minutes=1)).replace(second=0, microsecond=0)
+    return next_minute
+
+
+def schedule_repeated_task(task_func, task_name, interval_minutes, task_key):
+    """Schedule task to run repeatedly at rounded time with cooldown mechanism"""
+    def run_and_reschedule():
+        if not running:
+            return
+        
+        # Run the task with cooldown check
+        result = run_with_cooldown(task_func, task_name, task_key)
+        
+        # Determine next run time based on result
+        if running:
+            if result and result.startswith("❌"):
+                # Task failed - use cooldown period (1 hour)
+                next_time = datetime.now() + timedelta(hours=cooldown_hours)
+                log_message(f"⏸️ Cooldown active. Next check for {task_name} in {cooldown_hours} hour(s)")
+            else:
+                # Task succeeded - use normal interval
+                next_time = datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=interval_minutes)
+            
+            delay_seconds = (next_time - datetime.now()).total_seconds()
+            if delay_seconds > 0 and running:
+                threading.Timer(delay_seconds, run_and_reschedule).start()
+    
+    # Get next rounded minute
+    next_minute = get_next_rounded_time()
+    
+    # Calculate delay to next rounded minute
+    delay_seconds = (next_minute - datetime.now()).total_seconds()
+    
+    # Schedule first run at next rounded minute
+    if delay_seconds > 0:
+        threading.Timer(delay_seconds, run_and_reschedule).start()
+    
+    log_message(f"✅ Scheduled: {task_name} starting at {next_minute.strftime('%H:%M')}, then every {interval_minutes} minutes")
+
+
+def run_with_cooldown(task_func, task_name, task_key):
+    """Run task with cooldown mechanism"""
+    global failure_counts, last_failure_time
+    
+    # Initialize counters if needed
+    if task_key not in failure_counts:
+        failure_counts[task_key] = 0
+    if task_key not in last_failure_time:
+        last_failure_time[task_key] = None
+    
+    # Run the task
+    result = safe_run(task_func, task_name)
+    
+    # Check if it failed
+    if result and result.startswith("❌"):
+        # Task failed
+        failure_counts[task_key] += 1
+        last_failure_time[task_key] = datetime.now()
+        
+        # Check if we've exceeded threshold
+        if failure_counts[task_key] >= failure_threshold:
+            log_message(f"⚠️ {task_name} has failed {failure_counts[task_key]} times!", is_error=True)
+            if email_enabled:
+                try:
+                    send_email_alert(get_alert_type_for_task(task_key))
+                    log_message(f"📧 Warning email sent for {task_name}")
+                except Exception as e:
+                    log_message(f"❌ Failed to send warning email: {e}", is_error=True)
+        else:
+            log_message(f"📊 Failure count for {task_name}: {failure_counts[task_key]}/{failure_threshold}")
+    else:
+        # Task succeeded - reset counter
+        if failure_counts[task_key] > 0:
+            log_message(f"✅ {task_name} recovered. Failure counter reset.")
+        failure_counts[task_key] = 0
+        last_failure_time[task_key] = None
+    
+    return result
+
+
+def get_alert_type_for_task(task_key):
+    """Map task key to alert type"""
+    mapping = {
+        "recommend": "recommendation",
+        "production": "webdie",
+        "opc": "opcdie"
+    }
+    return mapping.get(task_key, "webdie")
 
 
 def start_app():
-    """Bắt đầu chạy task"""
-    global running
+    """Start running tasks with rounded time"""
+    global running, failure_threshold, cooldown_hours
+    
+    # Update settings from UI
+    try:
+        failure_threshold = int(entry_threshold.get())
+        if failure_threshold <= 0:
+            raise ValueError
+    except ValueError:
+        messagebox.showerror("Error", "Please enter valid positive number for failure threshold.")
+        return
+    
+    try:
+        cooldown_hours = int(entry_cooldown.get())
+        if cooldown_hours <= 0:
+            raise ValueError
+    except ValueError:
+        messagebox.showerror("Error", "Please enter valid positive number for cooldown hours.")
+        return
+    
     running = True
-    schedule.clear()
 
-    # Lấy interval cho từng task
+    # Get interval for each task
     try:
         if var_recommend.get():
             interval_rec = int(entry_recommend.get())
             if interval_rec <= 0:
                 raise ValueError
-            schedule.every(interval_rec).minutes.do(
-                lambda: safe_run(lambda: check_recommendation(isNotify=email_enabled), "Check Recommendation")
+            schedule_repeated_task(
+                lambda: check_recommendation(isNotify=False),  # Email handled by cooldown
+                "Check Recommendation",
+                interval_rec,
+                "recommend"
             )
-            log_message(f"✅ Scheduled: check_recommendation() every {interval_rec} minutes")
 
         if var_production.get():
             interval_prod = int(entry_production.get())
             if interval_prod <= 0:
                 raise ValueError
-            schedule.every(interval_prod).minutes.do(
-                lambda: safe_run(lambda: check_production_status(isNotify=email_enabled), "Check Production Status")
+            schedule_repeated_task(
+                lambda: check_production_status(isNotify=False),  # Email handled by cooldown
+                "Check Production Status",
+                interval_prod,
+                "production"
             )
-            log_message(f"✅ Scheduled: check_production_status() every {interval_prod} minutes")
 
         if var_opc.get():
             interval_opc = int(entry_opc.get())
             if interval_opc <= 0:
                 raise ValueError
-            schedule.every(interval_opc).minutes.do(
-                lambda: safe_run(lambda: check_OPC_data(isNotify=email_enabled), "Check OPC Data")
+            schedule_repeated_task(
+                lambda: check_OPC_data(isNotify=False),  # Email handled by cooldown
+                "Check OPC Data",
+                interval_opc,
+                "opc"
             )
-            log_message(f"✅ Scheduled: check_OPC_data() every {interval_opc} minutes")
 
     except ValueError:
         messagebox.showerror("Error", "Please enter valid positive numbers for minutes.")
@@ -92,7 +205,7 @@ def start_app():
         messagebox.showwarning("Warning", "Please select at least one task.")
         return
 
-    # Cập nhật nút Start/Stop
+    # Update Start/Stop button
     btn_start.config(state="disabled")
     btn_stop.config(state="normal")
     
@@ -108,23 +221,31 @@ def start_app():
     entry_recommend.config(state="disabled")
     entry_production.config(state="disabled")
     entry_opc.config(state="disabled")
+    
+    # Disable settings fields
+    entry_threshold.config(state="disabled")
+    entry_cooldown.config(state="disabled")
 
-    log_message("▶️ Scheduler started.")
-    threading.Thread(target=run_scheduler, daemon=True).start()
+    next_time = get_next_rounded_time()
+    log_message(f"▶️ Scheduler started. First run at {next_time.strftime('%H:%M:%S')}")
 
 
 def safe_run(func, name):
-    """Chạy hàm an toàn, có log"""
+    """Run function safely with logging and result capture"""
     try:
         log_message(f"Running: {name}() ...")
-        func()
+        result = func()
+        if result:
+            log_message(f"Result: {result}")
         log_message(f"✅ Finished: {name}()")
+        return result
     except Exception as e:
         log_message(f"❌ Error in {name}(): {e}", is_error=True)
+        return f"❌ Failed: {str(e)}"
 
 
 def safe_send_email(alert_type):
-    """Gửi email an toàn, chỉ gửi nếu enabled"""
+    """Send email safely, only send if enabled"""
     global email_enabled
     if email_enabled:
         try:
@@ -152,10 +273,12 @@ def toggle_email():
 
 
 def stop_app():
-    """Dừng toàn bộ task"""
-    global running
+    """Stop all tasks"""
+    global running, failure_counts, last_failure_time
     running = False
-    schedule.clear()
+    # Reset failure counters
+    failure_counts.clear()
+    last_failure_time.clear()
     btn_start.config(state="normal")
     btn_stop.config(state="disabled")
     
@@ -172,13 +295,17 @@ def stop_app():
     entry_production.config(state="normal")
     entry_opc.config(state="normal")
     
+    # Enable settings fields
+    entry_threshold.config(state="normal")
+    entry_cooldown.config(state="normal")
+    
     log_message("🛑 Stopping all scheduled tasks...")
 
 
 # ------------------ UI ------------------
 root = tk.Tk()
 root.title("Vopak Monitor")
-root.geometry("650x450")
+root.geometry("650x550")
 
 # Configure ttk styles
 style = ttk.Style()
@@ -242,6 +369,26 @@ checkbox_email.pack(side='left')
 # Set initial style to enabled
 checkbox_email.config(style='EmailEnabled.TCheckbutton')
 ttk.Label(section_email, text="(Toggle to enable/disable email notifications)", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(10, 0))
+
+# --- Settings section ---
+section_settings = ttk.LabelFrame(frame, text="Cooldown Settings", padding=10)
+section_settings.pack(fill='x', pady=(0, 10))
+
+frame_threshold = ttk.Frame(section_settings)
+frame_threshold.pack(anchor='w', pady=3)
+ttk.Label(frame_threshold, text="Failure threshold:").pack(side='left', padx=(0, 5))
+entry_threshold = ttk.Entry(frame_threshold, width=6, justify='center')
+entry_threshold.insert(0, "5")
+entry_threshold.pack(side='left')
+ttk.Label(frame_threshold, text="(Send warning after N failures)", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(5, 0))
+
+frame_cooldown = ttk.Frame(section_settings)
+frame_cooldown.pack(anchor='w', pady=3)
+ttk.Label(frame_cooldown, text="Cooldown period:").pack(side='left', padx=(0, 5))
+entry_cooldown = ttk.Entry(frame_cooldown, width=6, justify='center')
+entry_cooldown.insert(0, "1")
+entry_cooldown.pack(side='left')
+ttk.Label(frame_cooldown, text="hour(s) (Wait before retry after failure)", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(5, 0))
 
 # --- Control buttons section ---
 section_controls = ttk.Frame(frame)

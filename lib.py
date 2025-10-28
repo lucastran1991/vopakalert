@@ -20,14 +20,14 @@ def get_epoch_range(days_ahead=5):
 # --- Hàm gửi email ---
 def send_email_alert(alert_type):
     if alert_type == "recommendation":
-        subject = "[Alert] Vopak Boiler Activity"
-        body = "System detected an issue with Boiler Activity data. Please check the system."
+        subject = "[Critical Alert] Vopak Boiler Activity - Multiple Failures"
+        body = "The system has detected multiple consecutive failures (5+) with Boiler Activity data. The service has been experiencing issues and requires immediate attention.\n\nPlease check the system."
     elif alert_type == "opcdie":
-        subject = "[Alert] OPC Data Issue"
-        body = "The OPC data is not available. Please check the system."
+        subject = "[Critical Alert] OPC Data Issue - Multiple Failures"
+        body = "The OPC data has been unavailable for multiple consecutive checks (5+). The service has been experiencing issues and requires immediate attention.\n\nPlease check the system."
     else:
-        subject = "[Alert] Website Down"
-        body = "The monitored website is down. Please check the system."
+        subject = "[Critical Alert] Website Down - Multiple Failures"
+        body = "The monitored website has been down for multiple consecutive checks (5+). The service has been experiencing issues and requires immediate attention.\n\nPlease check the system."
 
     sender_email = "luanxinhdata@gmail.com"
     receiver_emails = [
@@ -77,14 +77,19 @@ def check_recommendation(isNotify=True):
 
         if total_records < 5:
             print("Error: totalRecords < 5")
+            result = f"❌ Failed: Only {total_records} records found (minimum 5 required)"
             if isNotify:
                 send_email_alert("recommendation")
+            return result
         else:
             print("OK, totalRecords =", total_records)
+            return f"✅ Success: {total_records} records found"
 
     except json.JSONDecodeError:
+        error_msg = "❌ Failed: Invalid JSON response"
         print("Error: Invalid JSON response")
         print("Raw response:", response.text)
+        return error_msg
 
 def check_production_status(isNotify=True):
     url = "http://bwcext.atomiton.com:8090/fid-tqlengineres/vopakui/index.html#/auth/login"
@@ -92,12 +97,20 @@ def check_production_status(isNotify=True):
         response = requests.get(url, timeout=10)  # timeout 10 giây
         if response.status_code == 200:
             print("✅ Website is UP (status 200)")
+            return "✅ Success: Website is UP (status 200)"
         else:
+            result = f"❌ Failed: Website returned status {response.status_code}"
+            print(result)
             if isNotify:
                 send_email_alert("webdie")
+            return result
     except requests.exceptions.RequestException as e:
+        error_msg = f"❌ Failed: Website unreachable - {str(e)}"
         print("❌ Error: Website unreachable — web die")
         print("Detail:", e)
+        if isNotify:
+            send_email_alert("webdie")
+        return error_msg
 
 def check_OPC_data(isNotify=True):
     url = "http://vopakext.atomiton.com:8080/fid-DigitalTerminalInterface"
@@ -139,10 +152,14 @@ def check_OPC_data(isNotify=True):
             today_notifications.append(alert_text)
 
     if not today_notifications:
+        error_msg = "❌ Failed: No OPC notifications found today"
         print("error need to recheck the OPC")
         if isNotify:
             send_email_alert("opcdie")
+        return error_msg
     else:
+        result_msg = f"✅ Success: Found {len(today_notifications)} OPC notification(s) today"
         print("✅ OPC Notifications Today:")
         for alert in today_notifications:
             print(f"- {alert}")
+        return result_msg
