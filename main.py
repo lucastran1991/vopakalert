@@ -13,7 +13,7 @@ import time
 
 
 running = False  # Control flag for run/stop
-email_enabled = True  # Email enable/disable flag
+email_enabled = False  # Email enable/disable flag
 
 # Cooldown mechanism
 failure_counts = {}  # Track failures per task type
@@ -376,7 +376,7 @@ section_settings.pack(fill='x', pady=(0, 10))
 
 frame_threshold = ttk.Frame(section_settings)
 frame_threshold.pack(anchor='w', pady=3)
-ttk.Label(frame_threshold, text="Failure threshold:").pack(side='left', padx=(0, 5))
+ttk.Label(frame_threshold, text="Failure threshold").pack(side='left', padx=(0, 5))
 entry_threshold = ttk.Entry(frame_threshold, width=6, justify='center')
 entry_threshold.insert(0, "5")
 entry_threshold.pack(side='left')
@@ -384,7 +384,7 @@ ttk.Label(frame_threshold, text="(Send warning after N failures)", foreground='g
 
 frame_cooldown = ttk.Frame(section_settings)
 frame_cooldown.pack(anchor='w', pady=3)
-ttk.Label(frame_cooldown, text="Cooldown period:").pack(side='left', padx=(0, 5))
+ttk.Label(frame_cooldown, text="Cooldown period").pack(side='left', padx=(0, 5))
 entry_cooldown = ttk.Entry(frame_cooldown, width=6, justify='center')
 entry_cooldown.insert(0, "1")
 entry_cooldown.pack(side='left')
