@@ -5,7 +5,6 @@
         <value>C://WeatherLink//VopakSav//download.txt
         </value>
     </SetLocalData>
-
     <Find>
         <Terminal>
             <terminalId ne="" />
@@ -13,13 +12,11 @@
     </Find>
     <SetProcessData key="terminal"
         Value="[:$Response.Message.Value.Find.Result.Terminal.terminalId:]" />
-
     <Create>
         <SenseActivities>
             <startSensing>true</startSensing>
         </SenseActivities>
     </Create>
-
     <Create>
         <PopulateWeatherData>
             <filePath>[:$LocalData.path:]</filePath>
@@ -29,46 +26,39 @@
             <activate>true</activate>
         </PopulateWeatherData>
     </Create>
-
     <Create>
         <CaptureTankDetails>
             <sensingInterval>0../10min</sensingInterval>
             <startSensing>true</startSensing>
         </CaptureTankDetails>
     </Create>
-
     <Create>
         <CheckDemand>
             <runSchedule>0../120sec</runSchedule>
             <activate>true</activate>
         </CheckDemand>
     </Create>
-
     <Create>
         <SenseIsSteamingBit>
             <startSensing>true</startSensing>
         </SenseIsSteamingBit>
     </Create>
-
     <Create>
         <SenseIsCircuitHeatingBit>
             <startSensing>true</startSensing>
         </SenseIsCircuitHeatingBit>
     </Create>
-
     <Create>
         <SenseIsRunningBit>
             <startSensing>true</startSensing>
         </SenseIsRunningBit>
     </Create>
-
     <Create>
         <UpdateProfilingData>
             <startSensing>true</startSensing>
             <sensingInterval>30</sensingInterval>
         </UpdateProfilingData>
     </Create>
-
     <Query>
         <Create>
             <ActivityOptimizer>
@@ -87,7 +77,6 @@
             </ScheduleOptimizer>
         </Create>
     </Query>
-
     <Create>
         <MixingPlanner>
             <plannerName>mixingPlanner</plannerName>
@@ -99,7 +88,6 @@
             <activate>true</activate>
         </PredictHeating>
     </Create>
-
     <Create>
         <TankProductHistoryBasedProfiler>
             <profileComputerName>HistoryBasedProfiles</profileComputerName>
@@ -113,8 +101,6 @@
             <intervalSeq>1../12hour</intervalSeq>
         </TankProductProfileCalculator>
     </Create>
-
-
     <Create>
         <DailyBill>
             <name>DailyBillCalculator
@@ -123,14 +109,12 @@
             </activate>
         </DailyBill>
     </Create>
-
     <Create>
         <SenseMinMaxValue>
             <startRecording>true
             </startRecording>
         </SenseMinMaxValue>
     </Create>
-
     <Create>
         <MixingRecommendation>
             <isStart>0
@@ -139,14 +123,12 @@
             </isFinish>
         </MixingRecommendation>
     </Create>
-
     <Create>
         <SenseMixingActivity>
             <startSensing>true
             </startSensing>
         </SenseMixingActivity>
     </Create>
-
     <Create>
         <ProcessOPCReading>
             <startSchedule>true
@@ -155,7 +137,6 @@
             </scheduleInterval>
         </ProcessOPCReading>
     </Create>
-
     <Create>
         <CleanUpCircuitEnergyRecords>
             <olderThanMinutes>7200
@@ -166,7 +147,6 @@
             </cleanup>
         </CleanUpCircuitEnergyRecords>
     </Create>
-
     <Create>
         <UsageInstanceCreator>
             <numDays>5
@@ -183,7 +163,6 @@
             </activate>
         </OptimizedUsageInstanceCreator>
     </Create>
-
     <DeleteAll>
         <OPCSubscriberModel>
             <subscribeId ne="" />
@@ -223,7 +202,6 @@
             <pulseMap>$Null()</pulseMap>
         </OPCSubscriberModel>
     </Create>
-
     <Create>
         <KepserverKWCalculator>
             <loadInterval>0../1Min</loadInterval>
@@ -236,14 +214,12 @@
             <startSchedule>true</startSchedule>
         </SensePulseMeterReading>
     </Create>
-
     <Create>
         <ReinitializeOPCSubscriber>
             <loadInterval>0.1min../06hour</loadInterval>
             <startSchedule>true</startSchedule>
         </ReinitializeOPCSubscriber>
     </Create>
-
     <DeleteAll>
         <OPCWriterModel>
             <writeId ne="" />
@@ -276,16 +252,11 @@
             </OPCSubscribeConnectionConfig>
         </OPCWriterModel>
     </Create>
-
     <CreateActionExecutorSubscribers />
-
     <CreateReportSubscribers />
     <CreateGeneratedReportSubscribers />
-
     <CreateUserManagementSubscribers />
-
     <DelResponseData key="Message.Value" />
     <AlarmConditionExecutor />
-
     <HeatTraceCircuitReadingSubscriber />
 </Query>

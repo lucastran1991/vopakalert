@@ -14,5 +14,6 @@
         <Operation>subscription</Operation>
         <NodeId>ns=2;s=ATGHistorian.EnergyConsumption.USSAV1S01HST</NodeId>
     </InitOPCSubscriber>
+    
     <LoadModifier/>
 </Query>
