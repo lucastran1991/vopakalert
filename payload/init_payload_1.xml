@@ -1,0 +1,149 @@
+<Query>
+    <Query>
+        <DeleteAll>
+            <SenseActivities>
+                <SysId ne="" />
+            </SenseActivities>
+        </DeleteAll>
+        <DeleteAll>
+            <UpdateProfilingData>
+                <SysId ne="" />
+            </UpdateProfilingData>
+        </DeleteAll>
+        <DeleteAll>
+            <PopulateWeatherData>
+                <SysId ne="" />
+            </PopulateWeatherData>
+        </DeleteAll>
+        <DeleteAll>
+            <CheckDemand>
+                <SysId ne="" />
+            </CheckDemand>
+        </DeleteAll>
+        <DeleteAll>
+            <CaptureTankDetails>
+                <SysId ne="" />
+            </CaptureTankDetails>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseIsSteamingBit>
+                <SysId ne="" />
+            </SenseIsSteamingBit>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseIsCircuitHeatingBit>
+                <SysId ne="" />
+            </SenseIsCircuitHeatingBit>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseIsRunningBit>
+                <SysId ne="" />
+            </SenseIsRunningBit>
+        </DeleteAll>
+        <DeleteAll>
+            <ActivityOptimizer>
+                <SysId ne="" />
+            </ActivityOptimizer>
+        </DeleteAll>
+        <DeleteAll>
+            <ScheduleOptimizer>
+                <SysId ne="" />
+            </ScheduleOptimizer>
+        </DeleteAll>
+        <DeleteAll>
+            <TankProductHistoryBasedProfiler>
+                <SysId ne="" />
+            </TankProductHistoryBasedProfiler>
+        </DeleteAll>
+        <DeleteAll>
+            <TankProductProfileCalculator>
+                <SysId ne="" />
+            </TankProductProfileCalculator>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseSubStationUsage>
+                <SysId ne="" />
+            </SenseSubStationUsage>
+        </DeleteAll>
+        <DeleteAll>
+            <DailyBill>
+                <SysId ne="" />
+            </DailyBill>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseMinMaxValue>
+                <SysId ne="" />
+            </SenseMinMaxValue>
+        </DeleteAll>
+        <DeleteAll>
+            <MixingRecommendation>
+                <SysId ne="" />
+            </MixingRecommendation>
+        </DeleteAll>
+        <DeleteAll>
+            <SenseMixingActivity>
+                <SysId ne="" />
+            </SenseMixingActivity>
+        </DeleteAll>
+        <DeleteAll>
+            <CleanUpTankReadingHistory>
+                <SysId ne="" />
+            </CleanUpTankReadingHistory>
+        </DeleteAll>
+        <DeleteAll>
+            <CleanUpCircuitEnergyRecords>
+                <SysId ne="" />
+            </CleanUpCircuitEnergyRecords>
+        </DeleteAll>
+        <DeleteAll>
+            <ProcessOPCReading>
+                <SysId ne="" />
+            </ProcessOPCReading>
+        </DeleteAll>
+        <DeleteAll>
+            <OPCSubscriberModel>
+                <subscribeId ne="" />
+            </OPCSubscriberModel>
+        </DeleteAll>
+        <DeleteAll>
+            <OPCWriterModel>
+                <writeId ne="" />
+            </OPCWriterModel>
+        </DeleteAll>
+        <DeleteAll>
+            <KepserverKWCalculator>
+                <SysId ne="" />
+            </KepserverKWCalculator>
+        </DeleteAll>
+        <DeleteAll>
+            <SensePulseMeterReading>
+                <SysId ne="" />
+            </SensePulseMeterReading>
+        </DeleteAll>
+        <DeleteAll>
+            <ReinitializeOPCSubscriber>
+                <SysId ne="" />
+            </ReinitializeOPCSubscriber>
+        </DeleteAll>
+        <DeleteAll>
+            <MixingPlanner>
+                <SysId ne="" />
+            </MixingPlanner>
+        </DeleteAll>
+        <DeleteAll>
+            <PredictHeating>
+                <SysId ne="" />
+            </PredictHeating>
+        </DeleteAll>
+        <DeleteAll>
+            <UsageInstanceCreator>
+                <SysId ne="" />
+            </UsageInstanceCreator>
+        </DeleteAll>
+        <DeleteAll>
+            <OptimizedUsageInstanceCreator>
+                <SysId ne="" />
+            </OptimizedUsageInstanceCreator>
+        </DeleteAll>
+    </Query>
+</Query>

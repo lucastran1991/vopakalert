@@ -7,6 +7,9 @@ import requests
 import json
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+import subprocess
+import os
+import glob
 
 def get_epoch_range(days_ahead=5):
     current_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -163,3 +166,130 @@ def check_OPC_data(isNotify=True):
         for alert in today_notifications:
             print(f"- {alert}")
         return result_msg
+
+def restart_vopaksteam():
+    """Restart Vopaksteam engine using Windows command"""
+    command = 'tql -engine -start Path=F:\\atomitonsoftware\\vopaksteam'
+    
+    try:
+        # Execute command on Windows
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            success_msg = "✅ Success: Vopaksteam engine restarted"
+            print(success_msg)
+            if result.stdout:
+                print(f"Output: {result.stdout}")
+            return success_msg
+        else:
+            error_msg = f"❌ Failed: Command returned code {result.returncode}"
+            print(error_msg)
+            if result.stderr:
+                print(f"Error: {result.stderr}")
+            return error_msg
+            
+    except subprocess.TimeoutExpired:
+        error_msg = "❌ Failed: Command execution timed out"
+        print(error_msg)
+        return error_msg
+    except Exception as e:
+        error_msg = f"❌ Failed: {str(e)}"
+        print(f"Error executing command: {e}")
+        return error_msg
+
+def initialize_system_value():
+    """Initialize system value by sending HTTP POST with payloads from payload folder"""
+    url = "http://localhost:8080/fid-DigitalTerminalInterface"
+    payload_dir = "payload"
+    
+    # Find all XML files in payload directory
+    try:
+        if not os.path.exists(payload_dir):
+            error_msg = f"❌ Failed: Payload directory '{payload_dir}' not found"
+            print(error_msg)
+            return error_msg
+        
+        # Get all XML files from payload directory
+        payload_files = glob.glob(os.path.join(payload_dir, "*.xml"))
+        payload_files.sort()  # Sort for consistent ordering
+        
+        if not payload_files:
+            error_msg = f"❌ Failed: No XML files found in '{payload_dir}' directory"
+            print(error_msg)
+            return error_msg
+        
+        print(f"Found {len(payload_files)} payload file(s) to process")
+        
+    except Exception as e:
+        error_msg = f"❌ Failed: Error accessing payload directory - {str(e)}"
+        print(error_msg)
+        return error_msg
+    
+    headers = {
+        'userToken': 'SuperUser',
+        'Content-Type': 'application/xml'
+    }
+    
+    results = []
+    success_count = 0
+    failure_count = 0
+    
+    # Process each payload file
+    for payload_file in payload_files:
+        filename = os.path.basename(payload_file)
+        
+        # Read payload from file
+        try:
+            with open(payload_file, 'r', encoding='utf-8') as f:
+                payload = f.read()
+            
+            if not payload.strip():
+                print(f"⚠️ Warning: Payload file '{filename}' is empty, skipping")
+                failure_count += 1
+                results.append(f"{filename}: Empty file")
+                continue
+                
+        except Exception as e:
+            error_msg = f"Error reading '{filename}': {str(e)}"
+            print(f"❌ {error_msg}")
+            failure_count += 1
+            results.append(f"{filename}: Read error")
+            continue
+        
+        # Send HTTP POST request
+        try:
+            response = requests.post(url, headers=headers, data=payload, timeout=10)
+            response.raise_for_status()
+            
+            success_msg = f"✅ {filename}: Success (status {response.status_code})"
+            print(success_msg)
+            success_count += 1
+            results.append(f"{filename}: Success")
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"❌ {filename}: HTTP request failed - {str(e)}"
+            print(error_msg)
+            failure_count += 1
+            results.append(f"{filename}: Request failed")
+        except Exception as e:
+            error_msg = f"❌ {filename}: Unexpected error - {str(e)}"
+            print(f"Error: {error_msg}")
+            failure_count += 1
+            results.append(f"{filename}: Error")
+    
+    # Return summary
+    if success_count == len(payload_files):
+        summary = f"✅ Success: All {success_count} payload(s) initialized successfully"
+    elif success_count > 0:
+        summary = f"⚠️ Partial: {success_count} succeeded, {failure_count} failed out of {len(payload_files)} total"
+    else:
+        summary = f"❌ Failed: All {failure_count} payload(s) failed to initialize"
+    
+    print(f"\nSummary: {summary}")
+    return summary

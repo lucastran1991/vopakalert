@@ -1,0 +1,18 @@
+<Query>
+    <InitOPCSubscriber>
+        <ServerUri>opc.tcp://192.168.1.13:49320</ServerUri>
+        <SecurityMode>0</SecurityMode>
+        <Path>/atomiton/certs</Path>
+        <ValidityInDay>3650</ValidityInDay>
+        <AutoCertificateRenewal>true</AutoCertificateRenewal>
+        <PrivateKeyPwd>tql123#</PrivateKeyPwd>
+        <OrgName>atomiton</OrgName>
+        <KeySize>2048</KeySize>
+        <AppUri>urn:localhost:OPCUATQL</AppUri>
+        <AppName>atomitonClient@localhost</AppName>
+        <ProductUri>urn:atomiton.com:OPCUA</ProductUri>
+        <Operation>subscription</Operation>
+        <NodeId>ns=2;s=ATGHistorian.EnergyConsumption.USSAV1S01HST</NodeId>
+    </InitOPCSubscriber>
+    <LoadModifier/>
+</Query>

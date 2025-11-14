@@ -1,0 +1,291 @@
+<Query>
+    <SetLocalData>
+        <key>path
+        </key>
+        <value>C://WeatherLink//VopakSav//download.txt
+        </value>
+    </SetLocalData>
+
+    <Find>
+        <Terminal>
+            <terminalId ne="" />
+        </Terminal>
+    </Find>
+    <SetProcessData key="terminal"
+        Value="[:$Response.Message.Value.Find.Result.Terminal.terminalId:]" />
+
+    <Create>
+        <SenseActivities>
+            <startSensing>true</startSensing>
+        </SenseActivities>
+    </Create>
+
+    <Create>
+        <PopulateWeatherData>
+            <filePath>[:$LocalData.path:]</filePath>
+            <terminalId>[:$ProcessData.terminal:]</terminalId>
+            <runSchedule>1min../1hr</runSchedule>
+            <timezone>America/New_York</timezone>
+            <activate>true</activate>
+        </PopulateWeatherData>
+    </Create>
+
+    <Create>
+        <CaptureTankDetails>
+            <sensingInterval>0../10min</sensingInterval>
+            <startSensing>true</startSensing>
+        </CaptureTankDetails>
+    </Create>
+
+    <Create>
+        <CheckDemand>
+            <runSchedule>0../120sec</runSchedule>
+            <activate>true</activate>
+        </CheckDemand>
+    </Create>
+
+    <Create>
+        <SenseIsSteamingBit>
+            <startSensing>true</startSensing>
+        </SenseIsSteamingBit>
+    </Create>
+
+    <Create>
+        <SenseIsCircuitHeatingBit>
+            <startSensing>true</startSensing>
+        </SenseIsCircuitHeatingBit>
+    </Create>
+
+    <Create>
+        <SenseIsRunningBit>
+            <startSensing>true</startSensing>
+        </SenseIsRunningBit>
+    </Create>
+
+    <Create>
+        <UpdateProfilingData>
+            <startSensing>true</startSensing>
+            <sensingInterval>30</sensingInterval>
+        </UpdateProfilingData>
+    </Create>
+
+    <Query>
+        <Create>
+            <ActivityOptimizer>
+                <optimizerName>OptaPlanner</optimizerName>
+                <durationGrains>144</durationGrains>
+                <dataPostHours>2</dataPostHours>
+            </ActivityOptimizer>
+        </Create>
+    </Query>
+    <Query>
+        <Create>
+            <ScheduleOptimizer>
+                <optimizerName>OptaPlanner</optimizerName>
+                <runSchedule>3../12hour</runSchedule>
+                <activate>true</activate>
+            </ScheduleOptimizer>
+        </Create>
+    </Query>
+
+    <Create>
+        <MixingPlanner>
+            <plannerName>mixingPlanner</plannerName>
+        </MixingPlanner>
+    </Create>
+    <Create>
+        <PredictHeating>
+            <predictSchedule>2../12hour</predictSchedule>
+            <activate>true</activate>
+        </PredictHeating>
+    </Create>
+
+    <Create>
+        <TankProductHistoryBasedProfiler>
+            <profileComputerName>HistoryBasedProfiles</profileComputerName>
+            <numHoursHistory>168</numHoursHistory>
+            <volChangeThreshold>20.0</volChangeThreshold>
+        </TankProductHistoryBasedProfiler>
+    </Create>
+    <Create>
+        <TankProductProfileCalculator>
+            <profileComputerToUse>HistoryBasedProfiles</profileComputerToUse>
+            <intervalSeq>1../12hour</intervalSeq>
+        </TankProductProfileCalculator>
+    </Create>
+
+
+    <Create>
+        <DailyBill>
+            <name>DailyBillCalculator
+            </name>
+            <activate>true
+            </activate>
+        </DailyBill>
+    </Create>
+
+    <Create>
+        <SenseMinMaxValue>
+            <startRecording>true
+            </startRecording>
+        </SenseMinMaxValue>
+    </Create>
+
+    <Create>
+        <MixingRecommendation>
+            <isStart>0
+            </isStart>
+            <isFinish>0
+            </isFinish>
+        </MixingRecommendation>
+    </Create>
+
+    <Create>
+        <SenseMixingActivity>
+            <startSensing>true
+            </startSensing>
+        </SenseMixingActivity>
+    </Create>
+
+    <Create>
+        <ProcessOPCReading>
+            <startSchedule>true
+            </startSchedule>
+            <scheduleInterval>25Sec../30Sec
+            </scheduleInterval>
+        </ProcessOPCReading>
+    </Create>
+
+    <Create>
+        <CleanUpCircuitEnergyRecords>
+            <olderThanMinutes>7200
+            </olderThanMinutes>
+            <interval>100min
+            </interval>
+            <cleanup>true
+            </cleanup>
+        </CleanUpCircuitEnergyRecords>
+    </Create>
+
+    <Create>
+        <UsageInstanceCreator>
+            <numDays>5
+            </numDays>
+            <activate>true
+            </activate>
+        </UsageInstanceCreator>
+    </Create>
+    <Create>
+        <OptimizedUsageInstanceCreator>
+            <numDays>5
+            </numDays>
+            <activate>true
+            </activate>
+        </OptimizedUsageInstanceCreator>
+    </Create>
+
+    <DeleteAll>
+        <OPCSubscriberModel>
+            <subscribeId ne="" />
+        </OPCSubscriberModel>
+    </DeleteAll>
+    <Create>
+        <OPCSubscriberModel>
+            <Operation>subscription</Operation>
+            <OPCSubscribeConnectionConfig>
+                <ServerUri>opc.tcp://192.168.1.13:49320</ServerUri>
+                <SecurityMode>2</SecurityMode>
+                <SecurityOptions>
+                    <UserName />
+                    <Password />
+                    <ApplicationIdentity>
+                        <AppName>atomitonClient@localhost</AppName>
+                        <AppUri>urn:localhost:OPCUATQL</AppUri>
+                        <ProductUri>urn:atomiton.com:OPCUA</ProductUri>
+                    </ApplicationIdentity>
+                    <CertificationParameters>
+                        <OrgName>atomiton</OrgName>
+                        <Path>/atomiton/certs</Path>
+                        <PrivateKeyPwd>tql123#</PrivateKeyPwd>
+                        <ValidityInDay>3650</ValidityInDay>
+                        <AutoCertificateRenewal>true</AutoCertificateRenewal>
+                        <KeySize>2048</KeySize>
+                    </CertificationParameters>
+                </SecurityOptions>
+            </OPCSubscribeConnectionConfig>
+            <OPCSubscriptionConfig>
+                <NodeID>ns=2;s=ATGHistorian.EnergyConsumption.USSAV1S01HST</NodeID>
+                <AttributeID />
+                <SubscribeChild>true</SubscribeChild>
+            </OPCSubscriptionConfig>
+            <SubscriptionData>$Null()</SubscriptionData>
+            <SubscriptionPayload>$Null()</SubscriptionPayload>
+            <pulseMap>$Null()</pulseMap>
+        </OPCSubscriberModel>
+    </Create>
+
+    <Create>
+        <KepserverKWCalculator>
+            <loadInterval>0../1Min</loadInterval>
+            <startSchedule>true</startSchedule>
+        </KepserverKWCalculator>
+    </Create>
+    <Create>
+        <SensePulseMeterReading>
+            <loadInterval>0../30Min</loadInterval>
+            <startSchedule>true</startSchedule>
+        </SensePulseMeterReading>
+    </Create>
+
+    <Create>
+        <ReinitializeOPCSubscriber>
+            <loadInterval>0.1min../06hour</loadInterval>
+            <startSchedule>true</startSchedule>
+        </ReinitializeOPCSubscriber>
+    </Create>
+
+    <DeleteAll>
+        <OPCWriterModel>
+            <writeId ne="" />
+        </OPCWriterModel>
+    </DeleteAll>
+    <Create>
+        <OPCWriterModel>
+            <Operation>write</Operation>
+            <OpcTagNodePath>ns=2;s=Controller.Main PLC.Global</OpcTagNodePath>
+            <OPCSubscribeConnectionConfig>
+                <ServerUri>opc.tcp://192.168.1.13:49320</ServerUri>
+                <SecurityMode>2</SecurityMode>
+                <SecurityOptions>
+                    <UserName />
+                    <Password />
+                    <ApplicationIdentity>
+                        <AppName>atomitonClient@localhost</AppName>
+                        <AppUri>urn:localhost:OPCUATQL</AppUri>
+                        <ProductUri>urn:atomiton.com:OPCUA</ProductUri>
+                    </ApplicationIdentity>
+                    <CertificationParameters>
+                        <OrgName>atomiton</OrgName>
+                        <Path>/atomiton/certs</Path>
+                        <PrivateKeyPwd>tql123#</PrivateKeyPwd>
+                        <ValidityInDay>3650</ValidityInDay>
+                        <AutoCertificateRenewal>true</AutoCertificateRenewal>
+                        <KeySize>2048</KeySize>
+                    </CertificationParameters>
+                </SecurityOptions>
+            </OPCSubscribeConnectionConfig>
+        </OPCWriterModel>
+    </Create>
+
+    <CreateActionExecutorSubscribers />
+
+    <CreateReportSubscribers />
+    <CreateGeneratedReportSubscribers />
+
+    <CreateUserManagementSubscribers />
+
+    <DelResponseData key="Message.Value" />
+    <AlarmConditionExecutor />
+
+    <HeatTraceCircuitReadingSubscriber />
+</Query>

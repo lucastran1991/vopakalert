@@ -6,6 +6,8 @@ from lib import send_email_alert
 from lib import check_recommendation
 from lib import check_production_status
 from lib import check_OPC_data
+from lib import restart_vopaksteam
+from lib import initialize_system_value
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -139,6 +141,68 @@ def get_alert_type_for_task(task_key):
     return mapping.get(task_key, "webdie")
 
 
+def parse_time_string(time_str):
+    """Parse HH:MM:SS time string and return (hour, minute, second)"""
+    try:
+        parts = time_str.split(':')
+        if len(parts) == 3:
+            hour = int(parts[0])
+            minute = int(parts[1])
+            second = int(parts[2])
+            if 0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59:
+                return (hour, minute, second)
+        raise ValueError("Invalid time format")
+    except (ValueError, IndexError):
+        raise ValueError(f"Invalid time format: {time_str}. Expected HH:MM:SS")
+
+
+def schedule_daily_action(task_func, task_name, time_str):
+    """Schedule task to run daily at specific time"""
+    # Parse time string first
+    try:
+        hour, minute, second = parse_time_string(time_str)
+    except ValueError as e:
+        log_message(f"❌ Invalid time format for {task_name}: {e}", is_error=True)
+        return
+    
+    def run_and_reschedule():
+        if not running:
+            return
+        
+        # Run the task (no cooldown, just execute)
+        result = safe_run(task_func, task_name)
+        
+        # Reschedule for next day
+        if running:
+            # Calculate next day at same time
+            now = datetime.now()
+            target_time = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            
+            # If time has passed today, schedule for tomorrow
+            if target_time <= now:
+                target_time += timedelta(days=1)
+            
+            delay_seconds = (target_time - datetime.now()).total_seconds()
+            if delay_seconds > 0 and running:
+                threading.Timer(delay_seconds, run_and_reschedule).start()
+    
+    # Calculate first run time
+    now = datetime.now()
+    target_time = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+    
+    # If time has passed today, schedule for tomorrow
+    if target_time <= now:
+        target_time += timedelta(days=1)
+    
+    delay_seconds = (target_time - datetime.now()).total_seconds()
+    
+    if delay_seconds > 0:
+        threading.Timer(delay_seconds, run_and_reschedule).start()
+        log_message(f"✅ Scheduled: {task_name} daily at {time_str}. Next run: {target_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    else:
+        log_message(f"❌ Failed to schedule {task_name}: invalid time calculation", is_error=True)
+
+
 def start_app():
     """Start running tasks with rounded time"""
     global running, failure_threshold, cooldown_hours
@@ -201,7 +265,34 @@ def start_app():
         messagebox.showerror("Error", "Please enter valid positive numbers for minutes.")
         return
 
-    if not (var_recommend.get() or var_production.get() or var_opc.get()):
+    # Schedule daily actions
+    try:
+        if var_restart.get():
+            time_str = entry_restart_time.get().strip()
+            if not time_str:
+                raise ValueError("Time cannot be empty")
+            parse_time_string(time_str)  # Validate format
+            schedule_daily_action(
+                restart_vopaksteam,
+                "Restart Vopaksteam",
+                time_str
+            )
+
+        if var_init_system.get():
+            time_str = entry_init_time.get().strip()
+            if not time_str:
+                raise ValueError("Time cannot be empty")
+            parse_time_string(time_str)  # Validate format
+            schedule_daily_action(
+                initialize_system_value,
+                "Initialize System Value",
+                time_str
+            )
+    except ValueError as e:
+        messagebox.showerror("Error", f"Invalid time format: {e}\nPlease use HH:MM:SS format (e.g., 00:00:00)")
+        return
+
+    if not (var_recommend.get() or var_production.get() or var_opc.get() or var_restart.get() or var_init_system.get()):
         messagebox.showwarning("Warning", "Please select at least one task.")
         return
 
@@ -213,6 +304,8 @@ def start_app():
     checkbox_recommend.config(state="disabled")
     checkbox_production.config(state="disabled")
     checkbox_opc.config(state="disabled")
+    checkbox_restart.config(state="disabled")
+    checkbox_init_system.config(state="disabled")
     
     # Disable email checkbox
     checkbox_email.config(state="disabled")
@@ -221,6 +314,8 @@ def start_app():
     entry_recommend.config(state="disabled")
     entry_production.config(state="disabled")
     entry_opc.config(state="disabled")
+    entry_restart_time.config(state="disabled")
+    entry_init_time.config(state="disabled")
     
     # Disable settings fields
     entry_threshold.config(state="disabled")
@@ -286,6 +381,8 @@ def stop_app():
     checkbox_recommend.config(state="normal")
     checkbox_production.config(state="normal")
     checkbox_opc.config(state="normal")
+    checkbox_restart.config(state="normal")
+    checkbox_init_system.config(state="normal")
     
     # Enable email checkbox
     checkbox_email.config(state="normal")
@@ -294,6 +391,8 @@ def stop_app():
     entry_recommend.config(state="normal")
     entry_production.config(state="normal")
     entry_opc.config(state="normal")
+    entry_restart_time.config(state="normal")
+    entry_init_time.config(state="normal")
     
     # Enable settings fields
     entry_threshold.config(state="normal")
@@ -305,7 +404,7 @@ def stop_app():
 # ------------------ UI ------------------
 root = tk.Tk()
 root.title("Vopak Monitor")
-root.geometry("650x550")
+root.geometry("650x650")
 
 # Configure ttk styles
 style = ttk.Style()
@@ -357,6 +456,36 @@ entry_opc = ttk.Entry(frame_opc, width=6, justify='center')
 entry_opc.insert(0, "3")
 entry_opc.pack(side='left')
 ttk.Label(frame_opc, text="min").pack(side='left', padx=(5, 0))
+
+# --- Scheduled Actions section ---
+section_actions = ttk.LabelFrame(frame, text="Scheduled Actions", padding=15)
+section_actions.pack(fill='x', pady=(0, 15))
+
+ttk.Label(section_actions, text="Select actions and daily trigger time (HH:MM:SS):", font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(0, 10))
+
+# Action 1 - Restart Vopaksteam
+var_restart = tk.BooleanVar()
+frame_restart = ttk.Frame(section_actions)
+frame_restart.pack(anchor='w', pady=5, fill='x')
+checkbox_restart = ttk.Checkbutton(frame_restart, text="Restart Vopaksteam", variable=var_restart, width=25)
+checkbox_restart.pack(side='left')
+ttk.Label(frame_restart, text="At").pack(side='left', padx=(10, 5))
+entry_restart_time = ttk.Entry(frame_restart, width=10, justify='center')
+entry_restart_time.insert(0, "00:00:00")
+entry_restart_time.pack(side='left')
+ttk.Label(frame_restart, text="daily", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(5, 0))
+
+# Action 2 - Initialize System Value
+var_init_system = tk.BooleanVar()
+frame_init = ttk.Frame(section_actions)
+frame_init.pack(anchor='w', pady=5, fill='x')
+checkbox_init_system = ttk.Checkbutton(frame_init, text="Initialize System Value", variable=var_init_system, width=25)
+checkbox_init_system.pack(side='left')
+ttk.Label(frame_init, text="At").pack(side='left', padx=(10, 5))
+entry_init_time = ttk.Entry(frame_init, width=10, justify='center')
+entry_init_time.insert(0, "00:10:00")
+entry_init_time.pack(side='left')
+ttk.Label(frame_init, text="daily", foreground='gray', font=('Segoe UI', 8)).pack(side='left', padx=(5, 0))
 
 # --- Email toggle section ---
 section_email = ttk.Frame(frame)
