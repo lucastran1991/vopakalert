@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import subprocess
 import os
 import glob
+import time
 
 def get_epoch_range(days_ahead=5):
     current_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -169,38 +170,86 @@ def check_OPC_data(isNotify=True):
 
 def restart_vopaksteam():
     """Restart Vopaksteam engine using Windows command"""
-    command = 'tql -engine -stop Path=F:\\atomitonsoftware\\vopaksteam && tql -engine -start Path=F:\\atomitonsoftware\\vopaksteam'
+    # List of commands to execute sequentially
+    commands = [
+        ("stop", "F:\\TQLEngine"),
+        ("stop", "F:\\atomitonsoftware\\vopaksteam"),
+        ("stop", "C:\\Edge\\TQLEngine"),
+        ("start", "F:\\TQLEngine"),
+        ("start", "F:\\atomitonsoftware\\vopaksteam"),
+        ("start", "C:\\Edge\\TQLEngine"),
+    ]
+    
+    results = []
+    failed_commands = []
     
     try:
-        # Execute command on Windows
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+        # Execute each command sequentially
+        for action, path in commands:
+            command = f'tql -engine -{action} Path={path}'
+            print(f"Executing: {command}")
+            
+            try:
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    print(f"✅ {action.capitalize()} {path}: Success")
+                    if result.stdout:
+                        print(f"   Output: {result.stdout.strip()}")
+                else:
+                    error_info = f"{action.capitalize()} {path} failed (code {result.returncode})"
+                    print(f"❌ {error_info}")
+                    if result.stderr:
+                        print(f"   Error: {result.stderr.strip()}")
+                    failed_commands.append(error_info)
+                
+                results.append((action, path, result.returncode == 0))
+                
+                # Wait 2 seconds between commands
+                if action != commands[-1][0] or path != commands[-1][1]:  # Don't wait after last command
+                    time.sleep(2)
+                    
+            except subprocess.TimeoutExpired:
+                error_info = f"{action.capitalize()} {path} timed out"
+                print(f"❌ {error_info}")
+                failed_commands.append(error_info)
+                results.append((action, path, False))
+            except Exception as e:
+                error_info = f"{action.capitalize()} {path} error: {str(e)}"
+                print(f"❌ {error_info}")
+                failed_commands.append(error_info)
+                results.append((action, path, False))
         
-        if result.returncode == 0:
-            success_msg = "✅ Success: Vopaksteam engine restarted"
+        # Determine overall result
+        success_count = sum(1 for _, _, success in results if success)
+        total_count = len(results)
+        
+        if success_count == total_count:
+            success_msg = f"✅ Success: All {total_count} engine command(s) executed successfully"
             print(success_msg)
-            if result.stdout:
-                print(f"Output: {result.stdout}")
             return success_msg
+        elif success_count > 0:
+            partial_msg = f"⚠️ Partial: {success_count}/{total_count} command(s) succeeded"
+            if failed_commands:
+                partial_msg += f" - Failed: {', '.join(failed_commands)}"
+            print(partial_msg)
+            return partial_msg
         else:
-            error_msg = f"❌ Failed: Command returned code {result.returncode}"
+            error_msg = f"❌ Failed: All {total_count} command(s) failed"
+            if failed_commands:
+                error_msg += f" - {', '.join(failed_commands)}"
             print(error_msg)
-            if result.stderr:
-                print(f"Error: {result.stderr}")
             return error_msg
             
-    except subprocess.TimeoutExpired:
-        error_msg = "❌ Failed: Command execution timed out"
-        print(error_msg)
-        return error_msg
     except Exception as e:
-        error_msg = f"❌ Failed: {str(e)}"
-        print(f"Error executing command: {e}")
+        error_msg = f"❌ Failed: Unexpected error - {str(e)}"
+        print(f"Error: {error_msg}")
         return error_msg
 
 def initialize_system_value():
