@@ -401,10 +401,50 @@ def stop_app():
     log_message("🛑 Stopping all scheduled tasks...")
 
 
+def manual_restart_and_init():
+    """Manually trigger restart engine and initialize system value"""
+    def execute_actions():
+        # Disable button while operation is in progress
+        btn_manual_restart.config(state="disabled")
+        
+        try:
+            log_message("🔄 Manual restart and initialize triggered...")
+            
+            # Step 1: Restart Vopaksteam
+            log_message("Step 1: Restarting Vopaksteam engine...")
+            restart_result = safe_run(restart_vopaksteam, "Restart Vopaksteam")
+            
+            # Small delay to ensure restart completes
+            time.sleep(2)
+            
+            # Step 2: Initialize System Value (regardless of restart result)
+            log_message("Step 2: Initializing system value...")
+            init_result = safe_run(initialize_system_value, "Initialize System Value")
+            
+            # Log completion
+            if restart_result and restart_result.startswith("✅") and init_result and init_result.startswith("✅"):
+                log_message("✅ Manual restart and initialize completed successfully")
+            elif restart_result and restart_result.startswith("✅"):
+                log_message("⚠️ Restart succeeded but initialization had issues", is_error=True)
+            elif init_result and init_result.startswith("✅"):
+                log_message("⚠️ Restart had issues but initialization succeeded", is_error=True)
+            else:
+                log_message("❌ Manual restart and initialize completed with errors", is_error=True)
+                
+        except Exception as e:
+            log_message(f"❌ Error during manual restart and initialize: {e}", is_error=True)
+        finally:
+            # Re-enable button after completion
+            btn_manual_restart.config(state="normal")
+    
+    # Run in background thread to avoid blocking UI
+    threading.Thread(target=execute_actions, daemon=True).start()
+
+
 # ------------------ UI ------------------
 root = tk.Tk()
 root.title("Vopak Monitor")
-root.geometry("650x650")
+root.geometry("650x680")
 
 # Configure ttk styles
 style = ttk.Style()
@@ -528,6 +568,13 @@ btn_start.pack(side='left', padx=5)
 
 btn_stop = ttk.Button(section_controls, text="🛑 Stop App", command=stop_app, state="disabled", width=15)
 btn_stop.pack(side='left', padx=5)
+
+# --- Manual action button section ---
+section_manual = ttk.Frame(frame)
+section_manual.pack(pady=(0, 15))
+
+btn_manual_restart = ttk.Button(section_manual, text="🔄 Force Restart & Initialize", command=manual_restart_and_init, width=30)
+btn_manual_restart.pack()
 
 # --- Log area section ---
 section_logs = ttk.LabelFrame(frame, text="Activity Logs", padding=10)

@@ -169,7 +169,7 @@ def check_OPC_data(isNotify=True):
 
 def restart_vopaksteam():
     """Restart Vopaksteam engine using Windows command"""
-    command = 'tql -engine -start Path=F:\\atomitonsoftware\\vopaksteam'
+    command = 'tql -engine -stop Path=F:\\atomitonsoftware\\vopaksteam && tql -engine -start Path=F:\\atomitonsoftware\\vopaksteam'
     
     try:
         # Execute command on Windows
