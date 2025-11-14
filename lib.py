@@ -11,6 +11,7 @@ import subprocess
 import os
 import glob
 import time
+import sys
 
 def get_epoch_range(days_ahead=5):
     current_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -189,13 +190,17 @@ def restart_vopaksteam():
             command = f'tql -engine -{action} Path={path}'
             print(f"Executing: {command}")
             
+            # Start commands may take longer, use 30 seconds timeout
+            # Stop commands are usually faster, use 15 seconds
+            timeout_seconds = 30 if action == "start" else 15
+            
             try:
                 result = subprocess.run(
                     command,
                     shell=True,
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=timeout_seconds
                 )
                 
                 if result.returncode == 0:
@@ -255,13 +260,30 @@ def restart_vopaksteam():
 def initialize_system_value():
     """Initialize system value by sending HTTP POST with payloads from payload folder"""
     url = "http://localhost:8080/fid-DigitalTerminalInterface"
-    payload_dir = "payload"
+    
+    # Get the correct path for payload directory
+    # When running as PyInstaller executable, use sys._MEIPASS
+    # Otherwise, use current directory
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = sys._MEIPASS
+    else:
+        # Running as script
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    payload_dir = os.path.join(base_path, "payload")
+    
+    # Also try relative path from current working directory (for development)
+    if not os.path.exists(payload_dir):
+        payload_dir = "payload"
     
     # Find all XML files in payload directory
     try:
         if not os.path.exists(payload_dir):
             error_msg = f"❌ Failed: Payload directory '{payload_dir}' not found"
             print(error_msg)
+            print(f"   Searched in: {os.path.abspath(payload_dir)}")
+            print(f"   Current working directory: {os.getcwd()}")
             return error_msg
         
         # Get all XML files from payload directory
