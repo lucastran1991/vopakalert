@@ -1,0 +1,15 @@
+#
+scope(fid: energyoptws):
+  scope(fid: dos):
+    var $query:
+      DOS:
+        DOSName(eq: "AtomitonOPCMultiAsset")
+    $dosconfig = find($query, MLP.newML())
+    DeleteAll:
+      DOSContext:
+        DOSContextId(ne: "")
+    logInfo = $dosconfig
+    Create =
+      DOSContext:
+        @@strDOSConfigID: $TL.dosconfig.Find.Result.DOS.DOSConfigID
+        strActivate: $Null()

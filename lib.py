@@ -259,8 +259,6 @@ def restart_vopaksteam():
 
 def initialize_system_value():
     """Initialize system value by sending HTTP POST with payloads from payload folder"""
-    url = "http://localhost:8080/fid-DigitalTerminalInterface"
-    
     # Get the correct path for payload directory
     # When running as PyInstaller executable, use sys._MEIPASS
     # Otherwise, use current directory
@@ -277,7 +275,7 @@ def initialize_system_value():
     if not os.path.exists(payload_dir):
         payload_dir = "payload"
     
-    # Find all XML files in payload directory
+    # Check if payload directory exists
     try:
         if not os.path.exists(payload_dir):
             error_msg = f"❌ Failed: Payload directory '{payload_dir}' not found"
@@ -285,34 +283,38 @@ def initialize_system_value():
             print(f"   Searched in: {os.path.abspath(payload_dir)}")
             print(f"   Current working directory: {os.getcwd()}")
             return error_msg
-        
-        # Get all XML files from payload directory
-        payload_files = glob.glob(os.path.join(payload_dir, "*.xml"))
-        payload_files.sort()  # Sort for consistent ordering
-        
-        if not payload_files:
-            error_msg = f"❌ Failed: No XML files found in '{payload_dir}' directory"
-            print(error_msg)
-            return error_msg
-        
-        print(f"Found {len(payload_files)} payload file(s) to process")
-        
     except Exception as e:
         error_msg = f"❌ Failed: Error accessing payload directory - {str(e)}"
         print(error_msg)
         return error_msg
     
-    headers = {
+    # Phase 1: Process XML files (init_payload_1.xml, init_payload_2.xml, init_payload_3.xml)
+    url_xml = "http://localhost:8080/fid-DigitalTerminalInterface"
+    headers_xml = {
         'userToken': 'SuperUser',
         'Content-Type': 'application/xml'
     }
     
-    results = []
-    success_count = 0
-    failure_count = 0
+    # Get XML files (specifically the first 3 payload files)
+    xml_files = []
+    for i in range(1, 4):
+        xml_file = os.path.join(payload_dir, f"init_payload_{i}.xml")
+        if os.path.exists(xml_file):
+            xml_files.append(xml_file)
     
-    # Process each payload file
-    for payload_file in payload_files:
+    if not xml_files:
+        error_msg = f"❌ Failed: No XML payload files (init_payload_1.xml, init_payload_2.xml, init_payload_3.xml) found"
+        print(error_msg)
+        return error_msg
+    
+    print(f"Phase 1: Processing {len(xml_files)} XML payload file(s)...")
+    
+    xml_results = []
+    xml_success_count = 0
+    xml_failure_count = 0
+    
+    # Process each XML payload file
+    for payload_file in xml_files:
         filename = os.path.basename(payload_file)
         
         # Read payload from file
@@ -322,45 +324,102 @@ def initialize_system_value():
             
             if not payload.strip():
                 print(f"⚠️ Warning: Payload file '{filename}' is empty, skipping")
-                failure_count += 1
-                results.append(f"{filename}: Empty file")
+                xml_failure_count += 1
+                xml_results.append(f"{filename}: Empty file")
                 continue
                 
         except Exception as e:
             error_msg = f"Error reading '{filename}': {str(e)}"
             print(f"❌ {error_msg}")
-            failure_count += 1
-            results.append(f"{filename}: Read error")
+            xml_failure_count += 1
+            xml_results.append(f"{filename}: Read error")
             continue
         
         # Send HTTP POST request
         try:
-            response = requests.post(url, headers=headers, data=payload, timeout=10)
+            response = requests.post(url_xml, headers=headers_xml, data=payload, timeout=10)
             response.raise_for_status()
             
             success_msg = f"✅ {filename}: Success (status {response.status_code})"
             print(success_msg)
-            success_count += 1
-            results.append(f"{filename}: Success")
+            xml_success_count += 1
+            xml_results.append(f"{filename}: Success")
             
         except requests.exceptions.RequestException as e:
             error_msg = f"❌ {filename}: HTTP request failed - {str(e)}"
             print(error_msg)
-            failure_count += 1
-            results.append(f"{filename}: Request failed")
+            xml_failure_count += 1
+            xml_results.append(f"{filename}: Request failed")
         except Exception as e:
             error_msg = f"❌ {filename}: Unexpected error - {str(e)}"
             print(f"Error: {error_msg}")
-            failure_count += 1
-            results.append(f"{filename}: Error")
+            xml_failure_count += 1
+            xml_results.append(f"{filename}: Error")
     
-    # Return summary
-    if success_count == len(payload_files):
-        summary = f"✅ Success: All {success_count} payload(s) initialized successfully"
-    elif success_count > 0:
-        summary = f"⚠️ Partial: {success_count} succeeded, {failure_count} failed out of {len(payload_files)} total"
+    # Phase 2: Process energy optimization payload (init_payload_4.txt) only if all XML payloads succeeded
+    energy_opt_success = False
+    energy_opt_result = None
+    
+    if xml_success_count == len(xml_files):
+        print(f"\nPhase 2: All {len(xml_files)} XML payload(s) succeeded. Processing Energy Optimization...")
+        
+        energy_opt_file = os.path.join(payload_dir, "init_payload_4.txt")
+        url_energy_opt = "http://vopakext.atomiton.com:8090/fid-vopaksteam"
+        headers_energy_opt = {
+            'UserToken': 'SuperUser',
+            'Content-Type': 'text/plain'
+        }
+        
+        if os.path.exists(energy_opt_file):
+            try:
+                # Read energy optimization payload
+                with open(energy_opt_file, 'r', encoding='utf-8') as f:
+                    energy_opt_payload = f.read()
+                
+                if not energy_opt_payload.strip():
+                    print("⚠️ Warning: Energy optimization payload file is empty")
+                    energy_opt_result = "Init Energy Optimization: Empty file"
+                else:
+                    # Send HTTP POST request for energy optimization
+                    response = requests.post(url_energy_opt, headers=headers_energy_opt, data=energy_opt_payload, timeout=10)
+                    response.raise_for_status()
+                    
+                    success_msg = f"✅ Init Energy Optimization: Success (status {response.status_code})"
+                    print(success_msg)
+                    energy_opt_success = True
+                    energy_opt_result = "Init Energy Optimization: Success"
+                    
+            except FileNotFoundError:
+                error_msg = "❌ Init Energy Optimization: File not found"
+                print(error_msg)
+                energy_opt_result = "Init Energy Optimization: File not found"
+            except requests.exceptions.RequestException as e:
+                error_msg = f"❌ Init Energy Optimization: HTTP request failed - {str(e)}"
+                print(error_msg)
+                energy_opt_result = f"Init Energy Optimization: Request failed - {str(e)}"
+            except Exception as e:
+                error_msg = f"❌ Init Energy Optimization: Unexpected error - {str(e)}"
+                print(f"Error: {error_msg}")
+                energy_opt_result = f"Init Energy Optimization: Error - {str(e)}"
+        else:
+            print("⚠️ Warning: Energy optimization payload file (init_payload_4.txt) not found, skipping")
+            energy_opt_result = "Init Energy Optimization: File not found"
     else:
-        summary = f"❌ Failed: All {failure_count} payload(s) failed to initialize"
+        print(f"\n⚠️ Phase 2 skipped: {xml_failure_count} of {len(xml_files)} XML payload(s) failed. Energy optimization will not be executed.")
+        energy_opt_result = "Init Energy Optimization: Skipped (XML payloads failed)"
+    
+    # Build summary
+    total_operations = len(xml_files) + (1 if energy_opt_result else 0)
+    total_success = xml_success_count + (1 if energy_opt_success else 0)
+    
+    if xml_success_count == len(xml_files) and energy_opt_success:
+        summary = f"✅ Success: All {total_operations} operation(s) completed successfully ({len(xml_files)} XML payloads + Energy Optimization)"
+    elif xml_success_count == len(xml_files) and energy_opt_result and not energy_opt_success:
+        summary = f"⚠️ Partial: All {len(xml_files)} XML payload(s) succeeded, but Energy Optimization failed"
+    elif xml_success_count > 0:
+        summary = f"⚠️ Partial: {xml_success_count}/{len(xml_files)} XML payload(s) succeeded, Energy Optimization skipped"
+    else:
+        summary = f"❌ Failed: All {len(xml_files)} XML payload(s) failed, Energy Optimization skipped"
     
     print(f"\nSummary: {summary}")
     return summary
