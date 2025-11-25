@@ -414,8 +414,8 @@ def manual_restart_and_init():
             log_message("Step 1: Restarting Vopaksteam engine...")
             restart_result = safe_run(restart_vopaksteam, "Restart Vopaksteam")
             
-            # Small delay to ensure restart completes
-            time.sleep(2)
+            # Delay 1 minute to wait for system to successfully start up
+            time.sleep(60)
             
             # Step 2: Initialize System Value (regardless of restart result)
             log_message("Step 2: Initializing system value...")
