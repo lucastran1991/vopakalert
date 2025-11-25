@@ -175,10 +175,10 @@ def restart_vopaksteam():
     commands = [
         ("stop", "F:\\TQLEngine"),
         ("stop", "F:\\atomitonsoftware\\vopaksteam"),
-        ("stop", "C:\\Edge\\TQLEngine"),
+        # ("stop", "C:\\Edge\\TQLEngine"),
         ("start", "F:\\TQLEngine"),
         ("start", "F:\\atomitonsoftware\\vopaksteam"),
-        ("start", "C:\\Edge\\TQLEngine"),
+        # ("start", "C:\\Edge\\TQLEngine"),
     ]
     
     results = []
